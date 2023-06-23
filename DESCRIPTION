@@ -1,0 +1,18 @@
+Package: latIntSim
+Title: Simulation studies on SEM with latent interactions (moderations)
+Version: 0.0.0.9000
+Authors@R: 
+    c(person("Tomasz", "Zoltak", ,
+             email = "tomek@zozlak.org",
+             role = c("aut", "cre", "cph"),
+             comment = c(ORCID = "0000-0003-1354-4472")))
+Description: What the package does (one paragraph).
+License:MIT + file LICENSE
+Depends:
+    R (>= 4.0.0)
+Imports:
+    mnormt
+Encoding: UTF-8
+Language: en-US
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.2.3

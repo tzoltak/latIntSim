@@ -1,2 +1,3 @@
 # latIntSim
-Simulation regarding latent variables interactions in SEM
+
+Simulation studies on SEM with latent interactions (moderations)
