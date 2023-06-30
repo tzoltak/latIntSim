@@ -10,8 +10,10 @@
 #' @param partRI partial correlation between (each) latent interaction variable
 #' and dependent latent variable
 #' @returns a numeric matrix with `nObs` rows and `nLV + nLI + 1` columns
-#' (values of `r`, `partR`, `partRI`, as well as of slope parameters and error
-#' term standard deviation are returned as attributes)
+#' (values of `r`, `partR`, `partRI`, as well as mapping of latent variables
+#' on interaction variables, slope parameters and error term standard deviation
+#' used to generate the dependent latent variable, and covariance matrix of
+#' latent variables are returned as attributes)
 #' @seealso [compute_error_std_dev], [compute_interaction_slope],
 #' [compute_dep_std_var]
 #' @examples
@@ -30,6 +32,9 @@
 #' round(cor(x), 2)
 #' # partial correlations
 #' round(res, 3)
+#' # comparison of theoretical and empirical covariances
+#' round(attributes(x)$cov, 2)
+#' round(cov(x), 2)
 #' @export
 generate_latent <- function(nObs, nLV, nLI, r, partR, partRI = partR) {
   stopifnot(is.numeric(nObs), length(nObs) == 1,
@@ -49,26 +54,44 @@ generate_latent <- function(nObs, nLV, nLI, r, partR, partRI = partR) {
   diag(vc) <- 1
   rownames(vc) <- colnames(vc) <- paste0("x", 1L:nLV)
   interactions <- utils::combn(seq_len(nLV), 2)[, seq_len(nLI), drop = FALSE]
+  mapping <- matrix(0L, nrow = ncol(interactions), ncol = nLV,
+                    dimnames = list(paste0(rep("xi", nLI),
+                                           apply(interactions, 2, paste,
+                                                 collapse = "")),
+                                    rownames(vc)))
   x <- cbind(mnormt::rmnorm(nObs, mean = rep(0, nLV), varcov = vc),
              matrix(rep(NA_real_, nObs*nLI), nrow = nObs, ncol = nLI,
-                    dimnames = list(NULL,
-                                    paste0(rep("xi", nLI),
-                                           apply(interactions, 2, paste,
-                                                 collapse = "")))))
+                    dimnames = list(NULL, rownames(mapping))))
   for (i in seq_len(nLI)) {
     x[, nLV + i] <- x[, interactions[1L, i]]*x[, interactions[2L, i]]
+    mapping[i, interactions[, i]] <- 1L
   }
   errorStdDev <- compute_error_std_dev(nLV, r, partR, 1)
   slopeI <- compute_interaction_slope(nLI, r, partRI, errorStdDev)
   slopes <- c(rep(1, nLV), rep(slopeI, nLI))
+  names(slopes) <- colnames(x)
   yStdDev <- compute_dep_std_var(nLV, nLI, r, 1, slopeI, errorStdDev)
-  y <- (as.vector(x %*% slopes) + stats::rnorm(nObs, 0, errorStdDev)) / yStdDev
+  expectedValues <- c(rep(0, nLV), rep(r, nLI))
+  y <- (as.vector(x %*% slopes) + stats::rnorm(nObs, 0, errorStdDev) -
+          sum(expectedValues * slopes)) / yStdDev
+
+  cov <- matrix(0, nrow = nLV + nLI + 1, ncol = nLV + nLI + 1,
+                dimnames = list(c(colnames(x), "y"), c(colnames(x), "y")))
+  cov[seq_len(nLV), seq_len(nLV)] <- r
+  cov[nLV + seq_len(nLI), nLV + seq_len(nLI)] <- r + r^2
+  diag(cov) <- c(rep(1, nLV), rep(1 + r^2, nLI), 1)
+  covY <- matrix(rep(slopes / yStdDev, length(slopes)),
+                  nrow = length(slopes)) * cov[-nrow(cov), -ncol(cov)]
+  cov[nrow(cov), -ncol(cov)] <- cov[-nrow(cov), ncol(cov)] <- colSums(covY)
+
   return(structure(cbind(x, y = y),
                    r = r,
                    rPart = partR,
                    rPartI = partRI,
+                   mapping = mapping,
                    slopes = slopes / yStdDev,
-                   errorStdDev = errorStdDev / yStdDev))
+                   errorStdDev = errorStdDev / yStdDev,
+                   cov = cov))
 }
 #' @title Data generation
 #' @description

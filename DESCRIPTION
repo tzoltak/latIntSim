@@ -1,6 +1,6 @@
 Package: latIntSim
 Title: Simulation studies on SEM with latent interactions (moderations)
-Version: 0.0.0.9000
+Version: 0.1.0.9000
 Authors@R: 
     c(person("Tomasz", "Zoltak", ,
              email = "tomek@zozlak.org",
@@ -11,8 +11,15 @@ License:MIT + file LICENSE
 Depends:
     R (>= 4.0.0)
 Imports:
-    mnormt
+    dplyr (>= 1.1.0),
+    tidyr (>= 1.2.0),
+    mnormt,
+    lavaan,
+    MplusAutomation,
+    MIIVsem,
+    seminr
 Encoding: UTF-8
 Language: en-US
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.2.3
+LazyData: true
