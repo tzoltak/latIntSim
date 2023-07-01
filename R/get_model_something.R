@@ -167,7 +167,7 @@ get_model_pars <- function(x) {
                                 obsIndic = vector(mode = "character", length = 0L),
                                 est = vector(mode = "numeric", length = 0L),
                                 se = vector(mode = "numeric", length = 0L),
-                                std.all = vector(mode = "numeric", length = 0L))
+                                lambda = vector(mode = "numeric", length = 0L))
     }
   } else if (inherits(x, "boot_seminr_model")) {
     stopifnot("Models with cross-loadings are not supported for PLS models." =

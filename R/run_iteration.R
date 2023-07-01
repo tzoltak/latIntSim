@@ -61,7 +61,8 @@ run_iteration <- function(condition) {
                  attributes(models[[i]]$results$summaries)$filename))
     }
   }
-  modelSummaries <- do.call(rbind, lapply(models, get_model_summary))
+  modelSummaries <- dplyr::bind_rows(lapply(models, get_model_summary),
+                                     .id = "model")
   modelSummaries$time <- estimationTimes
   modelPars <- lapply(models, get_model_pars)
   structPars = dplyr::bind_rows(lapply(modelPars,

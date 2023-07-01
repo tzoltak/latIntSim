@@ -7,7 +7,7 @@ lasted <- function(start) {
   stopifnot(inherits(start, "POSIXt"), length(start) == 1L)
   lasted <- difftime(Sys.time(), start, units = "mins")
   lastedMins <- floor(lasted)
-  lastedSecs <- paste0("00", round(60 * lasted - lastedMins, 0))
+  lastedSecs <- paste0("00", round(60 * (lasted - lastedMins), 0))
   return(paste0("(lasted ", lastedMins, ":",
                  substr(lastedSecs, nchar(lastedSecs) - 1L, nchar(lastedSecs)),
                 " mins.)"))
