@@ -31,7 +31,13 @@
 #'                   warnings are reported)}
 #' }
 get_model_summary <- function(x) {
-  if (inherits(x, "lavaan")) {
+  if (inherits(x, "try-error")) {
+    return(data.frame(time = NA_real_,
+                      converged = FALSE,
+                      niter = NA_integer_,
+                      warnings = x$message,
+                      stringsAsFactors = FALSE))
+  } else if (inherits(x, "lavaan")) {
     return(data.frame(time = x@timing$total,
                       converged = x@optim$converged,
                       niter = x@optim$iterations,
@@ -100,7 +106,18 @@ get_model_summary <- function(x) {
 #'         estimation.}
 #' }
 get_model_pars <- function(x) {
-  if (inherits(x, "lavaan")) {
+  if (inherits(x, "try-error")) {
+    structural <- data.frame(DV = vector(mode = "character", length = 0L),
+                             IV = vector(mode = "character", length = 0L),
+                             est =  vector(mode = "numeric", length = 0L),
+                             se =  vector(mode = "numeric", length = 0L),
+                             std.all =  vector(mode = "numeric", length = 0L))
+    measurement <- data.frame(LV = vector(mode = "character", length = 0L),
+                              obsIndic = vector(mode = "character", length = 0L),
+                              est = vector(mode = "numeric", length = 0L),
+                              se = vector(mode = "numeric", length = 0L),
+                              lambda = vector(mode = "numeric", length = 0L))
+  } else if (inherits(x, "lavaan")) {
     x <- lavaan::summary(x, standardized = TRUE)$pe[, c("lhs", "op", "rhs",
                                                         "est", "se", "std.all")]
     structural <- x[grepl("^y[[:digit:]]*$", x$lhs) & x$op == "~",

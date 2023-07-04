@@ -50,8 +50,8 @@ run_iteration <- function(condition) {
     cat("Running model ", names(models)[i], sep = "")
     startTime <- Sys.time()
     models[[i]] <- suppressMessages(
-      do.call(models[[i]]$fun, models[[i]][setdiff(names(models[[i]]),
-                                                   "fun")]))
+      try(do.call(models[[i]]$fun, models[[i]][setdiff(names(models[[i]]),
+                                                       "fun")])))
     estimationTimes[i] <- difftime(Sys.time(), startTime, units = "secs")
     cat(" ", lasted(startTime), "\n", sep = "")
     if (inherits(models[[i]], "mplusObject")) {
