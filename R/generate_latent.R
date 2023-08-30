@@ -1,6 +1,6 @@
 #' @title Data generation
 #' @description
-#' Generates a matrix with the sampled values of latent variables
+#' Generates a matrix with the sampled values of latent variables.
 #' @param nObs number of observations to be generated
 #' @param nLV number of exogenous latent variables
 #' @param nLI number of latent interactions

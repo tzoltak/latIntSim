@@ -29,7 +29,7 @@ used to generate the dependent latent variable, and covariance matrix of
 latent variables are returned as attributes)
 }
 \description{
-Generates a matrix with the sampled values of latent variables
+Generates a matrix with the sampled values of latent variables.
 }
 \examples{
 x <- generate_latent(nObs = 10^5, nLV = 3, nLI = 2,

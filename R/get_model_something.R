@@ -201,7 +201,8 @@ get_model_pars <- function(x) {
                              se = as.vector(x$paths_descriptives[, grep("^y[[:digit:]]* Boot SD$",
                                                                           colnames(x$paths_descriptives))]))
     structural$std.all <- structural$est
-    structural <- structural[grep("^[xy][[:digit:]]*$", structural$IV), ]
+    structural$IV <- sub("^x([[:digit:]]+)\\*x([[:digit:]]+)$",
+                        "xi\\1\\2", structural$IV)
     measurement <- data.frame(LV = apply(x$outer_weights, 1,
                                          function(x, colnames) colnames[x != 0],
                                          colnames = colnames(x$outer_weights)),

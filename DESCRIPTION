@@ -1,6 +1,6 @@
 Package: latIntSim
 Title: Simulation studies on SEM with latent interactions (moderations)
-Version: 0.1.0.9000
+Version: 0.2.0
 Authors@R: 
     c(person("Tomasz", "Zoltak", ,
              email = "tomek@zozlak.org",

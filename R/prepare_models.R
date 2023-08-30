@@ -113,7 +113,8 @@ PROCESSORS ARE 4;",
                                                           interactionsMapping),
                          structural_model =
                            prepare_pls_structural_syntax(attributes(observed)$mapping,
-                                                         interactionsMapping))))
+                                                         interactionsMapping),
+                         maxIt = 300)))
 }
 #' @title Model estimation
 #' @description
