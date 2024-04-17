@@ -17,8 +17,10 @@ each condition}
 of a file storing simulation results (that will be saved to the disk)}
 }
 \value{
-(invisibly) a list three of data frames:
+(invisibly) a list four of data frames:
 \describe{
+\item{conditions}{a data frame that was passed to the function using the
+\code{conditions} argument}
 \item{modelSummaries}{basic model summary statistics - see \link{get_model_summary}}
 \item{structPars}{estimates of the structural part parameters -
 see \link{get_model_pars}, the additional column \code{gen} stores

@@ -37,12 +37,17 @@ run_iteration <- function(condition) {
                                                  attributes(latent)$mapping,
                                                  center = "mean",
                                                  nonredundantOnly = TRUE)
+  observedDoubleC <- create_interaction_indicators(observed, loadings,
+                                                  attributes(latent)$mapping,
+                                                  center = "double",
+                                                  nonredundantOnly = TRUE)
   observedResidC <- create_interaction_indicators(observed, loadings,
                                                   attributes(latent)$mapping,
                                                   center = "residual",
                                                   nonredundantOnly = TRUE)
   models <- prepare_models(observed = observed,
                            observedMeanC = observedMeanC,
+                           observedDoubleC = observedDoubleC,
                            observedResidC = observedResidC,
                            interactionsMapping = attributes(latent)$mapping)
   estimationTimes <- rep(NA_real_, length(models))

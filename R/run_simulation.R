@@ -10,8 +10,10 @@
 #' @details
 #' For description of estimated models see [prepare_models]. For references to
 #' additional details see [run_iteration].
-#' @returns (invisibly) a list three of data frames:
+#' @returns (invisibly) a list four of data frames:
 #' \describe{
+#'   \item{conditions}{a data frame that was passed to the function using the
+#'                     `conditions` argument}
 #'   \item{modelSummaries}{basic model summary statistics - see [get_model_summary]}
 #'   \item{structPars}{estimates of the structural part parameters -
 #'                     see [get_model_pars], the additional column `gen` stores

@@ -4,7 +4,11 @@
 \alias{prepare_unconstrained_syntax}
 \title{Model estimation}
 \usage{
-prepare_unconstrained_syntax(mapping, interactionsMapping)
+prepare_unconstrained_syntax(
+  mapping,
+  interactionsMapping,
+  centering = c("mean", "double", "resid")
+)
 }
 \arguments{
 \item{mapping}{a matrix describing which observed indicators are loaded by
@@ -14,6 +18,13 @@ returned by the \link{create_interaction_indicators}}
 \item{interactionsMapping}{a matrix describing which exogenous latent
 variables construct interaction terms, typically the \code{mapping} attribute
 of an object returned by the \code{generate_latent}}
+
+\item{centering}{character vector describing method of centering the observed
+inidicators: "mean" - \emph{first-order} indicators are mean centered (but
+product indicators are not), "double" - both \emph{first-order} and product
+indicators are centered, "resid" - product indicators are residuals from the
+regression of products of \emph{first-order} indicators on these \emph{first-order}
+indicators}
 }
 \value{
 a string with model syntax

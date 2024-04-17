@@ -35,13 +35,20 @@ get_model_summary <- function(x) {
     return(data.frame(time = NA_real_,
                       converged = FALSE,
                       niter = NA_integer_,
-                      warnings = x$message,
+                      warnings = as.character(x),
                       stringsAsFactors = FALSE))
   } else if (inherits(x, "lavaan")) {
+    variances <- lavaan::summary(x)$pe
+    variances <- variances[variances$op == "~~" & variances$lhs == variances$rhs, ]
     return(data.frame(time = x@timing$total,
                       converged = x@optim$converged,
                       niter = x@optim$iterations,
-                      warnings = x@optim$warn.txt,
+                      warnings =
+                        paste0(x@optim$warn.txt,
+                               ifelse(x@optim$warn.txt == "" |
+                                        all(variances$est >= 0), "", "; "),
+                               ifelse(all(variances$est >= 0), "",
+                                      "Some estimated variances are negative.")),
                       stringsAsFactors = FALSE))
   } else if (inherits(x, "mplusObject")) {
     return(data.frame(time = get_mplus_time(x$results$output),
@@ -67,6 +74,18 @@ get_model_summary <- function(x) {
                       converged = x$iterations <= x$settings$maxIt,
                       niter = x$iterations,
                       warnings = NA_character_,
+                      stringsAsFactors = FALSE))
+  } else if (inherits(x, "cSEMResults")) {
+    return(data.frame(time = NA_real_,
+                      converged = x$Information$Weight_info$Convergence_status,
+                      niter = x$Information$Weight_info$Number_iterations,
+                      warnings = ifelse(x$Information$Information_resample$Number_of_admissibles <
+                                          x$Information$Information_resample$Number_of_runs,
+                                        paste0(x$Information$Information_resample$Number_of_runs -
+                                                 x$Information$Information_resample$Number_of_admissibles,
+                                               " out of ",
+                                               x$Information$Information_resample$Number_of_runs,
+                                               " bootstrap samples failed to converge."), ""),
                       stringsAsFactors = FALSE))
   } else {
     stop("Unsupported type of model.")
@@ -106,25 +125,32 @@ get_model_summary <- function(x) {
 #'         estimation.}
 #' }
 get_model_pars <- function(x) {
+  # stop("Należałoby tu przenieść obliczanie BS parametrów wystandaryzowanych (obecnie robię to już przy analizie wyników), bo w przypadku Mplusa, z jego ograniczoną precyzją zapisu oszacowań, robienie tego post factum w oparciu o iloraz parametru standaryzowanego i niestandaryzowanego jest zawodne, gdy oszacowanie jest bardzo bliskie 0.")
   if (inherits(x, "try-error")) {
     structural <- data.frame(DV = vector(mode = "character", length = 0L),
                              IV = vector(mode = "character", length = 0L),
                              est =  vector(mode = "numeric", length = 0L),
                              se =  vector(mode = "numeric", length = 0L),
-                             std.all =  vector(mode = "numeric", length = 0L))
+                             std.all =  vector(mode = "numeric", length = 0L),
+                             std.all.se = vector(mode = "numeric", length = 0L))
     measurement <- data.frame(LV = vector(mode = "character", length = 0L),
                               obsIndic = vector(mode = "character", length = 0L),
                               est = vector(mode = "numeric", length = 0L),
                               se = vector(mode = "numeric", length = 0L),
-                              lambda = vector(mode = "numeric", length = 0L))
+                              lambda = vector(mode = "numeric", length = 0L),
+                              lanbda.se = vector(mode = "numeric", length = 0L))
   } else if (inherits(x, "lavaan")) {
     x <- lavaan::summary(x, standardized = TRUE)$pe[, c("lhs", "op", "rhs",
                                                         "est", "se", "std.all")]
     structural <- x[grepl("^y[[:digit:]]*$", x$lhs) & x$op == "~",
                     colnames(x) != "op"]
     names(structural) <- c("DV", "IV", "est", "se", "std.all")
+    structural$std.all.se <- structural$se * structural$std.all / structural$est
+    structural$IV[grep(":", structural$IV)] <-
+      paste0("xi", gsub("[^[:digit:]]", "", structural$IV[grep(":", structural$IV)]))
     measurement <- x[x$op == "=~" & !grepl("^xi", x$lhs), colnames(x) != "op"]
     names(measurement) <- c("LV", "obsIndic", "est", "se", "lambda")
+    measurement$lambda.se <- measurement$se * measurement$lambda / measurement$est
   } else if (inherits(x, "miive")) {
     stdDevs <- data.frame(DV = sub("~~.*$", "", names(x$v$coefficients)),
                           IV = sub("^.*~~", "", names(x$v$coefficients)),
@@ -144,6 +170,7 @@ get_model_pars <- function(x) {
                         all.x = TRUE)
     structural$std.all <- structural$est * structural$sd.y / structural$sd.x
     structural <- structural[, c("IV", "DV", "est", "se", "std.all")]
+    structural$std.all.se <- structural$se * structural$std.all / structural$est
 
     measurement <- x[grepl("^[xy][[:digit:]]*_[[:digit:]]+$", x$DV) & x$IV != "1", ]
     measurement <- merge(measurement, stdDevs[, c("DV", "sd")], by = "DV",
@@ -153,38 +180,43 @@ get_model_pars <- function(x) {
     measurement$std.all <- measurement$est * measurement$sd.y / measurement$sd.x
     measurement <- measurement[, c("IV", "DV", "est", "se", "std.all")]
     names(measurement) <- c("LV", "obsIndic", "est", "se", "lambda")
+    measurement$lambda.se <- measurement$se * measurement$lambda / measurement$est
   } else if (inherits(x, "mplusObject")) {
     if (any(c("se", "posterior_sd") %in%
             names(x$results$parameters$unstandardized))) {
-      stdX <- x$results$parameters$stdyx.standardized[, c("paramHeader", "param", "est")]
-      names(stdX) <- c("paramHeader", "param", "std.all")
-      if ("posterior_sd" %in% names(x$results$parameters$unstandardized)) {
+      if ("posterior_sd" %in% names(x$results$parameters$stdyx.standardized)) {
+        names(x$results$parameters$stdyx.standardized) <-
+          sub("^posterior_sd$", "se", names(x$results$parameters$stdyx.standardized))
         names(x$results$parameters$unstandardized) <-
           sub("^posterior_sd$", "se", names(x$results$parameters$unstandardized))
       }
+      stdX <- x$results$parameters$stdyx.standardized[, c("paramHeader", "param", "est", "se")]
+      names(stdX) <- c("paramHeader", "param", "std.all", "std.all.se")
       x <- merge(x$results$parameters$unstandardized,
                  stdX, by = c("paramHeader", "param"), all.x = TRUE)
       structural <- x[grep("\\.ON$", x$paramHeader),
-                      c("paramHeader", "param", "est", "se", "std.all")]
+                      c("paramHeader", "param", "est", "se", "std.all", "std.all.se")]
       structural$paramHeader <- tolower(sub("\\.ON", "", structural$paramHeader))
       structural$param <- tolower(structural$param)
-      names(structural) <- c("DV", "IV", "est", "se", "std.all")
+      names(structural) <- c("DV", "IV", "est", "se", "std.all", "std.all.se")
       measurement <- x[grep("\\.BY$", x$paramHeader),
-                       c("paramHeader", "param", "est", "se", "std.all")]
+                       c("paramHeader", "param", "est", "se", "std.all", "std.all.se")]
       measurement$paramHeader <- tolower(sub("\\.BY", "", measurement$paramHeader))
       measurement$param <- tolower(measurement$param)
-      names(measurement) <- c("LV", "obsIndic", "est", "se", "lambda")
+      names(measurement) <- c("LV", "obsIndic", "est", "se", "lambda", "lambda.se")
     } else {
       structural <- data.frame(DV = vector(mode = "character", length = 0L),
                                IV = vector(mode = "character", length = 0L),
                                est = vector(mode = "numeric", length = 0L),
                                se = vector(mode = "numeric", length = 0L),
-                               std.all = vector(mode = "numeric", length = 0L))
+                               std.all = vector(mode = "numeric", length = 0L),
+                               std.all.se = vector(mode = "numeric", length = 0L))
       measurement <- data.frame(LV = vector(mode = "character", length = 0L),
                                 obsIndic = vector(mode = "character", length = 0L),
                                 est = vector(mode = "numeric", length = 0L),
                                 se = vector(mode = "numeric", length = 0L),
-                                lambda = vector(mode = "numeric", length = 0L))
+                                lambda = vector(mode = "numeric", length = 0L),
+                                lanbda.se = vector(mode = "numeric", length = 0L))
     }
   } else if (inherits(x, "boot_seminr_model")) {
     stopifnot("Models with cross-loadings are not supported for PLS models." =
@@ -201,6 +233,7 @@ get_model_pars <- function(x) {
                              se = as.vector(x$paths_descriptives[, grep("^y[[:digit:]]* Boot SD$",
                                                                           colnames(x$paths_descriptives))]))
     structural$std.all <- structural$est
+    structural$std.all.se <- structural$se
     structural$IV <- sub("^x([[:digit:]]+)\\*x([[:digit:]]+)$",
                         "xi\\1\\2", structural$IV)
     measurement <- data.frame(LV = apply(x$outer_weights, 1,
@@ -211,7 +244,26 @@ get_model_pars <- function(x) {
                               se = rowSums(x$weights_descriptives[, grep(" SD$",
                                                                          colnames(x$weights_descriptives))]),
                               lambda = rowSums(x$outer_loadings))
+    measurement$lambda.se <- measurement$se * measurement$lambda / measurement$est
     measurement <- measurement[grep("^[xy][[:digit:]]*$", measurement$LV), ]
+  } else if (inherits(x, "cSEMResults")) {
+    x <- cSEM::infer(x)
+    structural <- data.frame(DV = sub(" ~.*$", "", names(x$Path_estimates$mean)),
+                             IV = sub("^.* ~ ", "", names(x$Path_estimates$mean)),
+                             est = x$Path_estimates$mean - x$Path_estimates$bias,
+                             se = x$Path_estimates$sd)
+    structural$IV[grep("\\.", structural$IV)] <-
+      paste0("xi", gsub("[^[:digit:]]", "", structural$IV[grep("\\.", structural$IV)]))
+    structural$std.all <- structural$est
+    structural$std.all.se <- structural$se
+    measurement <- data.frame(LV = sub(" =~.*$", "", names(x$Loading_estimates$mean)),
+                              obsIndic = sub("^.*=~ ", "", names(x$Loading_estimates$mean)),
+                              est = x$Weight_estimates$mean - x$Weight_estimates$bias,
+                              se = x$Weight_estimates$sd,
+                              lambda = x$Loading_estimates$mean - x$Loading_estimates$bias)
+    measurement$lambda.se <- measurement$se * measurement$lambda / measurement$est
+  } else {
+    stop("Unsupported type of model.")
   }
   return(list(structural = structural,
               measurement = measurement))

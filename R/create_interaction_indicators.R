@@ -14,7 +14,8 @@
 #' relationship); typically the attribute `mapping` of a result of calling the
 #' [generate_latent]
 #' @param center a string specifying type of centering: grand mean centering
-#' ("mean", the default), no centering ("none") or residual centering ("residual")
+#' ("mean", the default), no centering ("none"), residual centering ("residual")
+#' or double mean centering ("double")
 #' @param nonredundantOnly a logical value specifying whether each latent
 #' variable indicator should create only one interaction observed indicator (in
 #' a given interaction); should be set to `TRUE` for the *unconstrained*
@@ -44,7 +45,7 @@
 #' @export
 create_interaction_indicators <- function(data, indicatorsMapping,
                                           interactionsMapping,
-                                          center = c("mean", "none", "residual"),
+                                          center = c("mean", "none", "residual", "double"),
                                           nonredundantOnly = TRUE) {
   center <- match.arg(center)
   stopifnot(is.matrix(data), is.numeric(data),
@@ -103,6 +104,8 @@ create_interaction_indicators <- function(data, indicatorsMapping,
       if (center == "residual") {
         newData[, l] <-
           stats::resid(stats::lm(newData[, l] ~ data[, as.vector(interactions)]))
+      } else if (center == "double") {
+        newData[, l] <- newData[, l] - mean(newData[, l])
       }
     }
     data <- cbind(data, newData)

@@ -8,7 +8,7 @@ create_interaction_indicators(
   data,
   indicatorsMapping,
   interactionsMapping,
-  center = c("mean", "none", "residual"),
+  center = c("mean", "none", "residual", "double"),
   nonredundantOnly = TRUE
 )
 }
@@ -28,7 +28,8 @@ relationship); typically the attribute \code{mapping} of a result of calling the
 \link{generate_latent}}
 
 \item{center}{a string specifying type of centering: grand mean centering
-("mean", the default), no centering ("none") or residual centering ("residual")}
+("mean", the default), no centering ("none"), residual centering ("residual")
+or double mean centering ("double")}
 
 \item{nonredundantOnly}{a logical value specifying whether each latent
 variable indicator should create only one interaction observed indicator (in

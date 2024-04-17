@@ -1,3 +1,19 @@
+# latIntSim 0.3.0 (18.04.2024)
+
+## New features
+
+-   Changed SAM estimation from the approach using product indicators to the newly developed (and much better) Kronecker/Tensor Product Method (name is stil to be decided by the Authors).
+-   Changed PLS estimation to its consistent (under normality) version by switching to the *cSEM* package.
+-   Implemented *double mean centering* approach.
+
+## Bug fixes
+
+-   Model specification in product indicators approach with mean (or *double mean*) centering and more than one latent interaction includes residual covariances of product indicators sharing one *first order* indicator.
+-   Standard errors of standardized parameters are extracted (if available and otherwise computed) by `get_model_pars()` to get rid of the problem with division by 0 which (rarely) ocurred while post-processing results from Mplus (which writes results in its output files using only three decimal places).
+-   Function `get_model_summary()` checks *lavaan* results for negative variances (because of the model specification these will be always, if any, residual variances of observed indicators) and if it finds any, it writes a warning to the results.
+-   Function `get_model_summary()` correctly deals with errors.
+-   Function `check_conditions()` correctly specifies conditions for checking whether parameters are integers.
+
 # latIntSim 0.2.0 (30.08.2023)
 
 ## New features

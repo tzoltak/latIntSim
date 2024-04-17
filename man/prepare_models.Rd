@@ -4,7 +4,13 @@
 \alias{prepare_models}
 \title{Model estimation}
 \usage{
-prepare_models(observed, observedMeanC, observedResidC, interactionsMapping)
+prepare_models(
+  observed,
+  observedMeanC,
+  observedDoubleC,
+  observedResidC,
+  interactionsMapping
+)
 }
 \arguments{
 \item{observed}{a matrix with values of observed indicators (excluding
@@ -14,6 +20,11 @@ product indicators for interaction terms)}
 product indicators for interaction terms that were created using \emph{grand mean
 centering} approach, typically returned by \link{create_interaction_indicators}
 called with \code{center = "mean"}}
+
+\item{observedDoubleC}{a matrix with values of observed indicators including
+product indicators for interaction terms that were created using \emph{double mean
+centering} approach, typically returned by \link{create_interaction_indicators}
+called with \code{center = "double"}}
 
 \item{observedResidC}{a matrix with values of observed indicators including
 product indicators for interaction terms that were created using \emph{residual
