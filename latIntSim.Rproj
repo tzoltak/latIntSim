@@ -1,4 +1,5 @@
 Version: 1.0
+ProjectId: 6d7f0f57-d30c-4e54-b5a6-18adb1f72026
 
 RestoreWorkspace: No
 SaveWorkspace: No
@@ -17,5 +18,6 @@ StripTrailingWhitespace: Yes
 LineEndingConversion: Posix
 
 BuildType: Package
+PackageUseDevtools: Yes
 PackageInstallArgs: --no-multiarch --with-keep.source
 PackageRoxygenize: rd,collate,namespace

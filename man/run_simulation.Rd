@@ -4,7 +4,7 @@
 \alias{run_simulation}
 \title{Simulation flow}
 \usage{
-run_simulation(conditions, nIterPerCond, suffix = "")
+run_simulation(conditions, nIterPerCond, suffix = "", modelSpecsOnly = FALSE)
 }
 \arguments{
 \item{conditions}{a data frame with simulation conditions, typically
@@ -15,6 +15,10 @@ each condition}
 
 \item{suffix}{optionally a string - suffix that will be added to the name
 of a file storing simulation results (that will be saved to the disk)}
+
+\item{modelSpecsOnly}{optionally a logical flag indicating that only list
+of model specifications should be returned (for each condition), without
+actually estimating the models}
 }
 \value{
 (invisibly) a list four of data frames:

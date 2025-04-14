@@ -4,15 +4,20 @@
 \alias{run_iteration}
 \title{Simulation flow}
 \usage{
-run_iteration(condition)
+run_iteration(condition, modelSpecsOnly = FALSE)
 }
 \arguments{
 \item{condition}{a one-row data frame with additional parameters specifying
 data generation process that will be passed to data generating functions
 (\link{generate_latent}, \link{generate_loadings} and \link{generate_observed})}
+
+\item{modelSpecsOnly}{optionally a logical flag indicating that only list
+of model specifications should be returned, without actually estimating the
+models}
 }
 \value{
-a list of three data frames:
+By default or with \code{modelSpecsOnly = FALSE} - a list of three data
+frames:
 \describe{
 \item{modelSummaries}{basic model summary statistics - see \link{get_model_summary}}
 \item{structPars}{estimates of the structural part parameters -
@@ -23,6 +28,7 @@ see \link{get_model_pars}, the additional columns \code{gen} and
 \code{genLambda} store values of the parameters used in the
 data generating model}
 }
+With \code{modelSpecsOnly = TRUE} a list returned by \link{prepare_models}.
 }
 \description{
 Performs a single iteration of the simulation.
