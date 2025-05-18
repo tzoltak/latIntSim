@@ -28,7 +28,7 @@
 #'   \item{unconstrRC.SAM}{Product indicators, residual centered - unconstrained approach estimated by Structural After Measurement (local) using *lavaan*}
 #'   \item{LMS.ML}{Latent Moderated Structural implemented in *Mplus* - ML (EM) estimation}
 #'   \item{LMS.Bayes}{Latent Moderated Structural implemented in *Mplus* - Bayesian estimation}
-#'   \item{PLS}{Partial Least Squares-SEM implemented via *seminr* package}
+#'   \item{PLS}{Partial Least Squares-SEM implemented via *cSEM* package}
 #' }
 #' @returns a list of lists: in each element the first element is a model
 #' estimating function and other elements are arguments that should be passed
@@ -105,31 +105,31 @@ prepare_models <- function(observed, observedMeanC, observedDoubleC,
                          data = observed,
                          sam.method = "local",
                          se = "twostep"),
-              LMS.ML = list(fun = MplusAutomation::mplusModeler,
-                            object = MplusAutomation::mplusObject(
-                              ANALYSIS = "TYPE IS RANDOM;
+              LMS.Mplus = list(fun = MplusAutomation::mplusModeler,
+                               object = MplusAutomation::mplusObject(
+                                 ANALYSIS = "TYPE IS RANDOM;
 ESTIMATOR IS MLR;
 ALGORITHM IS INTEGRATION EM;
 INTEGRATION IS STANDARD(15);
-PROCESSORS ARE 4;",
-                              OUTPUT = "STANDARDIZED (STDYX) TECH8;",
-                              MODEL = syntaxLMS,
-                              rdata = as.data.frame(observed),
-                              autov = TRUE),
-                            run = 1L,
-                            modelout = "lms_em.inp"),
-              LMS.Bayes = list(fun = MplusAutomation::mplusModeler,
-                               object = MplusAutomation::mplusObject(
-                                 ANALYSIS = "TYPE IS RANDOM;
-ESTIMATOR IS BAYES;
-CHAINS ARE 2;
 PROCESSORS ARE 4;",
                                  OUTPUT = "STANDARDIZED (STDYX) TECH8;",
                                  MODEL = syntaxLMS,
                                  rdata = as.data.frame(observed),
                                  autov = TRUE),
-                               run = 1L,
-                               modelout = "lms_bayes.inp"),
+                            run = 1L,
+                            modelout = "lms_em.inp"),
+              Bayes.Mplus = list(fun = MplusAutomation::mplusModeler,
+                                 object = MplusAutomation::mplusObject(
+                                   ANALYSIS = "TYPE IS RANDOM;
+ESTIMATOR IS BAYES;
+CHAINS ARE 2;
+PROCESSORS ARE 4;",
+                                   OUTPUT = "STANDARDIZED (STDYX) TECH8;",
+                                   MODEL = syntaxLMS,
+                                   rdata = as.data.frame(observed),
+                                   autov = TRUE),
+                                 run = 1L,
+                                 modelout = "lms_bayes.inp"),
               # PLS.seminr = list(fun =
               #                   function(...) {
               #                     seminr::bootstrap_model(seminr::estimate_pls(...),

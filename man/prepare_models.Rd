@@ -53,6 +53,6 @@ At the moment function estimates models:
 \item{unconstrRC.SAM}{Product indicators, residual centered - unconstrained approach estimated by Structural After Measurement (local) using \emph{lavaan}}
 \item{LMS.ML}{Latent Moderated Structural implemented in \emph{Mplus} - ML (EM) estimation}
 \item{LMS.Bayes}{Latent Moderated Structural implemented in \emph{Mplus} - Bayesian estimation}
-\item{PLS}{Partial Least Squares-SEM implemented via \emph{seminr} package}
+\item{PLS}{Partial Least Squares-SEM implemented via \emph{cSEM} package}
 }
 }

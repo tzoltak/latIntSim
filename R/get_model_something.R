@@ -20,6 +20,8 @@
 #'                           iterations of model estimation is no greater than
 #'                           the maximal number of estimations (both are
 #'                           reported explicitly in the object)}
+#'     \item{*cSEMResults*}{taken from information included explicitly in the
+#'                          object}
 #'   }
 #'   \item{niter}{the number of iterations spent to estimated the model (not
 #'                reported for *miive*, because its estimation procedure is not
@@ -95,7 +97,7 @@ get_model_summary <- function(x) {
 #' @description
 #' Gets parameters from estimated models.
 #' @param x an object of one of the following classes: *lavaan*, *mplusObject*,
-#' *miive* or *seminr_model*
+#' *miive*, *seminr_model* or *cSEMResults*
 #' @returns a list of two data frames:
 #'
 #' \strong{structural}
@@ -105,6 +107,7 @@ get_model_summary <- function(x) {
 #'   \item{est}{regression (slope) coefficient}
 #'   \item{se}{standard error of `est`}
 #'   \item{std.all}{standardized regression (slope) coefficient}
+#'   \item{std.all.se}{standard error of `std.all`}
 #' }
 #' \strong{measurement}
 #' \describe{
@@ -113,17 +116,20 @@ get_model_summary <- function(x) {
 #'   \item{est}{factor loading}
 #'   \item{se}{standard error of `est`}
 #'   \item{lambda}{standardized factor loading}
+#'   \item{lambda.se}{standardized factor loading of `lambda`}
 #' }
 #' @details
 #' \itemize{
-#'   \item{For *seminr_model* objects (PLS models) only standardized structural
-#'         coefficients are reported in model results so in `structural` values
-#'         in `est` always equal those in `std.all` for these models.}
+#'   \item{For *boot_seminr_model* and *cSEMResults* objects (PLS models) only
+#'         standardized structural coefficients are reported in model results,
+#'         so in `structural` values in `est` always equal those in `std.all`
+#'         for these models.}
 #'   \item{For *miive* objects no loadings are reported for first observed
 #'         indicators of each latent variable as these serve as so-called
 #'         *scaling indicators* and play a special role in model parameters
 #'         estimation.}
 #' }
+#' @seealso [standardize_pars()]
 get_model_pars <- function(x) {
   # stop("Należałoby tu przenieść obliczanie BS parametrów wystandaryzowanych (obecnie robię to już przy analizie wyników), bo w przypadku Mplusa, z jego ograniczoną precyzją zapisu oszacowań, robienie tego post factum w oparciu o iloraz parametru standaryzowanego i niestandaryzowanego jest zawodne, gdy oszacowanie jest bardzo bliskie 0.")
   if (inherits(x, "try-error")) {
@@ -140,43 +146,44 @@ get_model_pars <- function(x) {
                               lambda = vector(mode = "numeric", length = 0L),
                               lanbda.se = vector(mode = "numeric", length = 0L))
   } else if (inherits(x, "lavaan")) {
-    x <- lavaan::summary(x, standardized = TRUE)$pe[, c("lhs", "op", "rhs",
-                                                        "est", "se", "std.all")]
+    x <- lavaan::summary(x, standardized = TRUE,
+                         remove.step1 = FALSE)$pe[, c("lhs", "op", "rhs",
+                                                      "est", "se", "std.all")]
     structural <- x[grepl("^y[[:digit:]]*$", x$lhs) & x$op == "~",
                     colnames(x) != "op"]
     names(structural) <- c("DV", "IV", "est", "se", "std.all")
-    structural$std.all.se <- structural$se * structural$std.all / structural$est
     structural$IV[grep(":", structural$IV)] <-
       paste0("xi", gsub("[^[:digit:]]", "", structural$IV[grep(":", structural$IV)]))
+    covs <- x[x$op == "~~", c("lhs", "rhs", "est")]
+    covs$lhs[grep(":", covs$lhs)] <-
+      paste0("xi", gsub("[^[:digit:]]", "", covs$lhs[grep(":", covs$lhs)]))
+    covs$rhs[grep(":", covs$rhs)] <-
+      paste0("xi", gsub("[^[:digit:]]", "", covs$rhs[grep(":", covs$rhs)]))
+    structural <- standardize_pars(structural, covs)
     measurement <- x[x$op == "=~" & !grepl("^xi", x$lhs), colnames(x) != "op"]
     names(measurement) <- c("LV", "obsIndic", "est", "se", "lambda")
     measurement$lambda.se <- measurement$se * measurement$lambda / measurement$est
   } else if (inherits(x, "miive")) {
-    stdDevs <- data.frame(DV = sub("~~.*$", "", names(x$v$coefficients)),
-                          IV = sub("^.*~~", "", names(x$v$coefficients)),
-                          sd = suppressWarnings(sqrt(x$v$coefficients)),
-                          stringsAsFactors = FALSE)
-    stdDevs <- stdDevs[stdDevs$DV == stdDevs$IV, ]
-    x <- data.frame(DV = sub("~.*$", "", names(stats::coef(x))),
-                    IV = sub("^.*~", "", names(stats::coef(x))),
-                    est = stats::coef(x),
-                    se = sqrt(diag(x$coefCov)),
-                    std.all = NA_real_,
-                    stringsAsFactors = FALSE)
-    structural <- x[grepl("^y[[:digit:]]*$", x$DV) & x$IV != "1", ]
-    structural <- merge(structural, stdDevs[, c("DV", "sd")], by = "DV",
-                        all.x = TRUE)
-    structural <- merge(structural, stdDevs[, c("IV", "sd")], by = "IV",
-                        all.x = TRUE)
-    structural$std.all <- structural$est * structural$sd.y / structural$sd.x
-    structural <- structural[, c("IV", "DV", "est", "se", "std.all")]
-    structural$std.all.se <- structural$se * structural$std.all / structural$est
+    coefs <- data.frame(DV = sub("~.*$", "", names(stats::coef(x))),
+                        IV = sub("^.*~", "", names(stats::coef(x))),
+                        est = stats::coef(x),
+                        se = sqrt(diag(x$coefCov)),
+                        std.all = NA_real_,
+                        stringsAsFactors = FALSE)
+    structural <- coefs[grepl("^y[[:digit:]]*$", coefs$DV) & coefs$IV != "1", ]
+    covs <- data.frame(lhs = sub("~~.*$", "", names(x$v$coefficients)),
+                       rhs = sub("^.*~~", "", names(x$v$coefficients)),
+                       est = suppressWarnings(x$v$coefficients),
+                       stringsAsFactors = FALSE)
+    structural <- standardize_pars(structural, covs)
+    stdDevs <- attributes(structural)$stdDevs
 
-    measurement <- x[grepl("^[xy][[:digit:]]*_[[:digit:]]+$", x$DV) & x$IV != "1", ]
+    measurement <- coefs[grepl("^[xy][[:digit:]]*_[[:digit:]]+$",
+                               coefs$DV) & coefs$IV != "1", ]
     measurement <- merge(measurement, stdDevs[, c("DV", "sd")], by = "DV",
                          all.x = TRUE)
     measurement <- merge(measurement, stdDevs[, c("IV", "sd")], by = "IV",
-                         all.x = TRUE)
+                         all.x = TRUE, suffixes = c(".x", ".y"))
     measurement$std.all <- measurement$est * measurement$sd.y / measurement$sd.x
     measurement <- measurement[, c("IV", "DV", "est", "se", "std.all")]
     names(measurement) <- c("LV", "obsIndic", "est", "se", "lambda")
@@ -199,6 +206,67 @@ get_model_pars <- function(x) {
       structural$paramHeader <- tolower(sub("\\.ON", "", structural$paramHeader))
       structural$param <- tolower(structural$param)
       names(structural) <- c("DV", "IV", "est", "se", "std.all", "std.all.se")
+
+      # # It looks like Mplus performs standardization of the interaction
+      # # parameters this way internally
+      # covs <- x[grepl("\\.WITH$", x$paramHeader) |
+      #             x$paramHeader %in% c("Variances", "Residual.Variances"),
+      #           c("paramHeader", "param", "est")]
+      # names(covs) <- c("lhs", "rhs", "est")
+      # covs$lhs <- tolower(ifelse(covs$lhs %in%
+      #                              c("Variances", "Residual.Variances"),
+      #                            covs$rhs, sub("\\.WITH", "", covs$lhs)))
+      # covs$rhs <- tolower(covs$rhs)
+      # covs[, c("lhs", "rhs")] <- t(apply(covs[, c("lhs", "rhs")], 1, sort))
+      # covsOther <- expand.grid(lhs = unique(structural$IV),
+      #                          rhs = unique(structural$IV),
+      #                          est = 0,
+      #                          stringsAsFactors = FALSE)
+      # covsOther <- covsOther[lower.tri(matrix(covsOther$lhs,
+      #                                         nrow = length(
+      #                                           unique(covsOther$lhs))),
+      #                                  diag = TRUE) &
+      #                          (grepl("^xi[[:digit:]]+$", covsOther$lhs) |
+      #                             grepl("^xi[[:digit:]]+$", covsOther$rhs)), ]
+      # whichInteractions <- grepl("^xi[[:digit:]]+$", covsOther$lhs) &
+      #   grepl("^xi[[:digit:]]+$", covsOther$rhs)
+      # covsOther$x <- ifelse(whichInteractions,
+      #                       paste0("x", substr(covsOther$lhs, 3, 3)),
+      #                       NA_character_)
+      # covsOther$y <- ifelse(whichInteractions,
+      #                       paste0("x", substr(covsOther$lhs, 4, 4)),
+      #                       NA_character_)
+      # covsOther$z <- ifelse(whichInteractions,
+      #                       paste0("x", substr(covsOther$rhs, 3, 3)),
+      #                       NA_character_)
+      # covsOther$w <- ifelse(whichInteractions,
+      #                       paste0("x", substr(covsOther$rhs, 4, 4)),
+      #                       NA_character_)
+      # covsTemp <- rbind(covs,
+      #                   data.frame(lhs = covs$rhs,
+      #                              rhs = covs$lhs,
+      #                              est = covs$est))
+      # covsTemp <- covsTemp[!duplicated(covsTemp), ]
+      # covsOther <- merge(covsOther, covsTemp, all.x = TRUE,
+      #                    by.x = c("x", "z"), by.y = c("lhs", "rhs"),
+      #                    suffixes = c("", ".cov.xz"))
+      # covsOther <- merge(covsOther, covsTemp, all.x = TRUE,
+      #                    by.x = c("y", "w"), by.y = c("lhs", "rhs"),
+      #                    suffixes = c("", ".cov.yw"))
+      # covsOther <- merge(covsOther, covsTemp, all.x = TRUE,
+      #                    by.x = c("x", "w"), by.y = c("lhs", "rhs"),
+      #                    suffixes = c("", ".cov.xw"))
+      # covsOther <- merge(covsOther, covsTemp, all.x = TRUE,
+      #                    by.x = c("y", "z"), by.y = c("lhs", "rhs"),
+      #                    suffixes = c("", ".cov.yz"))
+      # covsOther$est <- ifelse(!is.na(covsOther$est.cov.xz),
+      #                         covsOther$est.cov.xz*covsOther$est.cov.yw +
+      #                           covsOther$est.cov.xw*covsOther$est.cov.yz,
+      #                         covsOther$est)
+      # covs <- rbind(covs,
+      #               covsOther[, c("lhs", "rhs", "est")])
+      # structural <- standardize_pars(structural, covs)
+
       measurement <- x[grep("\\.BY$", x$paramHeader),
                        c("paramHeader", "param", "est", "se", "std.all", "std.all.se")]
       measurement$paramHeader <- tolower(sub("\\.BY", "", measurement$paramHeader))
@@ -218,7 +286,7 @@ get_model_pars <- function(x) {
                                 lambda = vector(mode = "numeric", length = 0L),
                                 lanbda.se = vector(mode = "numeric", length = 0L))
     }
-  } else if (inherits(x, "boot_seminr_model")) {
+  } else if (inherits(x, "seminr_model")) {
     stopifnot("Models with cross-loadings are not supported for PLS models." =
                 all(rowSums(x$outer_weights != 0) <= 1))
     structural <- data.frame(DV = rep(sub("^(y[[:digit:]]*) PLS Est\\.$", "\\1",
@@ -267,6 +335,68 @@ get_model_pars <- function(x) {
   }
   return(list(structural = structural,
               measurement = measurement))
+}
+#' @title Auxiliary functions
+#' @description
+#' Standardizes structural parameters of the interaction terms with respect
+#' to standard deviations of their first-order latent variables. If no
+#' standardized parameters are provided in the `structural` argument, it
+#' standardizes all structural parameters.
+#' @param structural a data frame with structural parameters, containing
+#' columns: `DV`, `IV`, `est`, `se` and `std.all`
+#' @param covs a data frame with covariances of latent variables and error
+#' terms, containing columns: `lhs`, `rhs` and `est`
+#' @returns a data frame provided with the `structural` parameter with
+#' recomputed vaues of the `std.all` column and new column `std.all.se`
+#' @seealso [get_model_pars()]
+standardize_pars <- function(structural, covs) {
+  stdDevs <- covs[covs$lhs == covs$rhs, ]
+  stdDevs <- data.frame(DV = stdDevs$lhs,
+                        IV = stdDevs$rhs,
+                        sd = sqrt(stdDevs$est),
+                        stringsAsFactors = FALSE)
+  # dealing with interaction LVs
+  stdDevsIntLVs <- stdDevs[stdDevs$DV == stdDevs$IV &
+                             grepl("^xi[[:digit:]]{2}$", stdDevs$DV),
+                           names(stdDevs) != "sd"]
+  stdDevs <- stdDevs[stdDevs$DV == stdDevs$IV &
+                       !(stdDevs$DV %in% stdDevsIntLVs$DV), ]
+  stdDevsIntLVs$LV <- stdDevsIntLVs$DV
+  stdDevsIntLVs$DV <- paste0("x", substring(stdDevsIntLVs$LV, 3, 3))
+  stdDevsIntLVs$IV <- paste0("x", substring(stdDevsIntLVs$LV, 4, 4))
+  stdDevsIntLVs <- merge(stdDevsIntLVs, stdDevs[, c("DV", "sd")], by = "DV")
+  stdDevsIntLVs <- merge(stdDevsIntLVs, stdDevs[, c("IV", "sd")], by = "IV")
+  stdDevsIntLVs$sd <- stdDevsIntLVs$sd.x * stdDevsIntLVs$sd.y
+  stdDevsIntLVs$DV <- stdDevsIntLVs$IV <- stdDevsIntLVs$LV
+  # reconstructing the SD of the dependent LV (y)
+  covsIndepLVs <- covs[grepl("^xi?[[:digit:]]+$", covs$lhs), ]
+  names(covsIndepLVs) <- c("DV", "IV", "cov")
+  covsIndepLVs <- merge(covsIndepLVs,
+                        structural[structural$DV == "y", c("IV", "est")],
+                        by = "IV")
+  covsIndepLVs <- merge(covsIndepLVs,
+                        structural[structural$DV == "y", c("IV", "est")],
+                        by.x = "DV", by.y = "IV", suffixes = c(".x",".y"))
+  covsIndepLVs$covPred <- covsIndepLVs$cov*covsIndepLVs$est.x*covsIndepLVs$est.y
+  covsIndepLVs$times <- ifelse(covsIndepLVs$DV == covsIndepLVs$IV, 1, 2)
+  varPred <- sum(covsIndepLVs$covPred*covsIndepLVs$times)
+  stdDevs$sd[stdDevs$DV == "y"] = sqrt(stdDevs$sd[stdDevs$DV == "y"]^2 +
+                                         varPred)
+  # merging all together
+  stdDevs <- rbind(stdDevs, stdDevsIntLVs[, names(stdDevs)])
+
+  structural <- merge(structural, stdDevs[, c("DV", "sd")], by = "DV",
+                      all.x = TRUE)
+  structural <- merge(structural, stdDevs[, c("IV", "sd")], by = "IV",
+                      all.x = TRUE, suffixes = c(".x",".y"))
+  structural$std.all2 <- structural$est * structural$sd.y / structural$sd.x
+  structural$std.all <- ifelse(grepl("^xi[[:digit:]]+$", structural$IV) |
+                                 is.na(structural$std.all),
+                               structural$std.all2, structural$std.all)
+  structural <- structural[, c("IV", "DV", "est", "se", "std.all")]
+  structural$std.all.se <- structural$se * structural$std.all / structural$est
+  return(structure(structural,
+                   stdDevs = stdDevs))
 }
 #' @title Auxiliary functions
 #' @description

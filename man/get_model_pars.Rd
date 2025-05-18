@@ -8,7 +8,7 @@ get_model_pars(x)
 }
 \arguments{
 \item{x}{an object of one of the following classes: \emph{lavaan}, \emph{mplusObject},
-\emph{miive} or \emph{seminr_model}}
+\emph{miive}, \emph{seminr_model} or \emph{cSEMResults}}
 }
 \value{
 a list of two data frames:
@@ -20,6 +20,7 @@ a list of two data frames:
 \item{est}{regression (slope) coefficient}
 \item{se}{standard error of \code{est}}
 \item{std.all}{standardized regression (slope) coefficient}
+\item{std.all.se}{standard error of \code{std.all}}
 }
 \strong{measurement}
 \describe{
@@ -28,6 +29,7 @@ a list of two data frames:
 \item{est}{factor loading}
 \item{se}{standard error of \code{est}}
 \item{lambda}{standardized factor loading}
+\item{lambda.se}{standardized factor loading of \code{lambda}}
 }
 }
 \description{
@@ -35,12 +37,16 @@ Gets parameters from estimated models.
 }
 \details{
 \itemize{
-\item{For \emph{seminr_model} objects (PLS models) only standardized structural
-coefficients are reported in model results so in \code{structural} values
-in \code{est} always equal those in \code{std.all} for these models.}
+\item{For \emph{boot_seminr_model} and \emph{cSEMResults} objects (PLS models) only
+standardized structural coefficients are reported in model results,
+so in \code{structural} values in \code{est} always equal those in \code{std.all}
+for these models.}
 \item{For \emph{miive} objects no loadings are reported for first observed
 indicators of each latent variable as these serve as so-called
 \emph{scaling indicators} and play a special role in model parameters
 estimation.}
 }
+}
+\seealso{
+\code{\link[=standardize_pars]{standardize_pars()}}
 }

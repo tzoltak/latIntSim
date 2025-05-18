@@ -28,6 +28,8 @@ model - if yes, it is assumed that model converged}
 iterations of model estimation is no greater than
 the maximal number of estimations (both are
 reported explicitly in the object)}
+\item{\emph{cSEMResults}}{taken from information included explicitly in the
+object}
 }
 \item{niter}{the number of iterations spent to estimated the model (not
 reported for \emph{miive}, because its estimation procedure is not

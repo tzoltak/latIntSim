@@ -1,3 +1,19 @@
+# latIntSim 0.4.0 (18.05.2025)
+
+## New features
+
+-   Correct way of standardizing structural paramaters of the latent interaction variables was implemented (i.e. with respect to the standard deviations of the first-order variables involved in a given interaction).
+    -   Results from the PLS estimation are unaffected, as they are standardized internally (and no unstandardized parameters are reported).
+    -   It seems that the *Mplus* performs standardization this correct way internally, so its results were left unaffected (after checking that the same results are obtained).
+
+## Updates
+
+-   Getting model parameters from the estimated models updated to be consistent with the final implemention of the local SAM approach in the *lavaan* package.
+
+## Documentation
+
+-   Mentioning of the *seminr* package consistently replaced with the *cSEM* package in the functions documentation.
+
 # latIntSim 0.3.1 (13.04.2025)
 
 ## New features

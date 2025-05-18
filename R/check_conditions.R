@@ -50,6 +50,7 @@ check_conditions <- function(conditions) {
             is.numeric(conditions$nObs), all(conditions$nObs > 0),
             all(as.integer(conditions$nObs) == conditions$nObs),
             is.numeric(conditions$nExogLVs), all(conditions$nExogLVs > 0),
+            all(conditions$nExogLVs < 10), # get_model_pars() won't work with more than 9
             all(as.integer(conditions$nExogLVs) == conditions$nExogLVs),
             is.numeric(conditions$nLIs),
             all(conditions$nLIs <= (conditions$nExogLVs * (conditions$nExogLVs - 1) / 2)),
